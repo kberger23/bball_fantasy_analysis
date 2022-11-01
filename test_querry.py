@@ -105,10 +105,9 @@ player_key = f"{game_id}.p.{player_id}"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-print(repr(yahoo_query.get_all_yahoo_fantasy_game_keys()))
-print(repr(yahoo_query.get_user_leagues_by_game_key(game_key)))
-#print(repr(yahoo_query.get_current_game_info()))
-print(repr(yahoo_query.get_league_metadata()))
+print(repr(yahoo_query.get_team_stats(team_id)))
+print(repr(yahoo_query.get_team_stats_by_week(team_id, 2)))
+#print(repr(yahoo_query.get_game_weeks_by_game_id(game_id)))
 
 # print(repr(yahoo_query.get_game_key_by_season(season)))
 # print(repr(yahoo_query.get_current_game_info()))
