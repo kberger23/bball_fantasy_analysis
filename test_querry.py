@@ -28,7 +28,7 @@ data = Data(data_dir)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 # set desired season year
-season = 2023
+season = 2022
 
 # set desired week
 chosen_week = 1
@@ -46,13 +46,13 @@ chosen_date = "2023-11-01"  # NHL - 2013 (for 2012)
 game_code = "nba"
 
 # set desired Yahoo Fantasy Sports game ID (see the get_all_yahoo_fantasy_game_keys query to retrieve values)
-game_id = 418
+game_id = 410
 
 # set desired Yahoo Fantasy Sports game key (see the get_all_yahoo_fantasy_game_keys query to retrieve values)
-game_key = "418"
+game_key = "410"
 
 # set desired league ID (see README.md for finding value)
-league_id = "55686"
+league_id = "170305"# "55686"
 
 # set desired team ID within desired league
 team_id = 1  # NFL
@@ -105,7 +105,8 @@ player_key = f"{game_id}.p.{player_id}"
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
-#print(repr(yahoo_query.get_all_yahoo_fantasy_game_keys()))
+print(repr(yahoo_query.get_all_yahoo_fantasy_game_keys()))
+print(repr(yahoo_query.get_user_leagues_by_game_key(game_key)))
 #print(repr(yahoo_query.get_current_game_info()))
 print(repr(yahoo_query.get_league_metadata()))
 

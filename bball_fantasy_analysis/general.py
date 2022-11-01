@@ -10,9 +10,9 @@ from yfpy.query import YahooFantasySportsQuery
 class FantasyNBAAnalyser:
     SEASON = 2023
     GAME_CODE = "nba"
-    GAME_ID = 418
-    GAME_KEY = "418"
-    LEAGUE_ID = "55686"
+    GAME_ID = 410 # 418
+    GAME_KEY = "410" # "418"
+    LEAGUE_ID = "170305" #"55686"
 
     LEAGUE_PLAYER_LIMIT = 101
 
@@ -67,6 +67,16 @@ class FantasyNBAAnalyser:
         data = []
         for team in standing.teams:
             t = team["team"]
+            data.append([t.team_standings.playoff_seed, t.name.decode("utf-8"), t.team_standings.outcome_totals.wins, t.team_standings.outcome_totals.losses, t.team_standings.outcome_totals.percentage, t.team_standings.points_for, t.team_standings.points_against, t.team_standings.rank <= 4])
 
-            data.append([t.team_standings.rank, t.name.decode("utf-8"), t.team_standings.outcome_totals.wins, t.team_standings.outcome_totals.losses, t.team_standings.outcome_totals.percentage, t.team_points.total, t.team_standings.points_for, t.team_standings.points_against, t.team_standings.rank <= 4])
-        return pd.DataFrame(data, columns=['Rank', 'Team', 'W', 'L', 'Ratio', 'Points', 'Points for', 'Points against', 'PlayOffs'])
+        return pd.DataFrame(data, columns=['Rank', 'Team', 'W', 'L', 'Ratio', 'Points +', 'Points -', 'PlayOffs']).sort_values(by=['Rank'], ascending=True)
+
+    @property
+    def current_week(self):
+
+        return self.query.get_league_metadata().current_week
+
+    @property
+    def end_week(self):
+
+        return self.query.get_league_metadata().end_week
