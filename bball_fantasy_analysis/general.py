@@ -49,6 +49,8 @@ class Query:
             browser_callback=True
         )
 
+        self._current_week = self.query.get_league_metadata().current_week
+
     @property
     def app_auth_file(self):
         with open("private.json", "r") as f:
@@ -62,14 +64,21 @@ class Query:
     def app_consumer_secret(self):
         return self.app_auth_file["consumer_secret"]
 
-    def retrieve(self, query: Callable, params: Union[Dict[str, str], None] = None, data_type_class: Type[YahooFantasyObject]=None, forceUpdate=False):
+    def retrieve(self, query: Callable, params: Union[Dict[str, str], None] = None, data_type_class: Type[YahooFantasyObject]=None, soft_force=False):
 
         file_path = f"{self.league_id}-{self.game_id}-{self.game_code}-{query.__name__}"
         if params is not None:
             for key, arg in params.items():
                 file_path += f"-{key}-{arg}"
 
-        if (self.data.data_dir/f"{file_path}.json").is_file() and not self.force_update and not forceUpdate:
+        import datetime as dt
+
+        _absolute_file_path = self.data.data_dir/f"{file_path}.json"
+
+        current_week = params is not None and "chosen_week" in list(params.keys()) and params["chosen_week"] == self._current_week
+        file_exist_but_created_today = _absolute_file_path.is_file() and dt.datetime.fromtimestamp(os.path.getctime(_absolute_file_path)).date() == dt.datetime.now().date()
+
+        if _absolute_file_path.is_file() and not self.force_update and (file_exist_but_created_today or (not soft_force and not current_week)):
             self.data.dev_offline = True
             self.data.save_data = False
         else:
@@ -79,8 +88,8 @@ class Query:
         try:
             return self.data.retrieve(file_path, query, params=params, data_type_class=data_type_class)
         except requests.exceptions.HTTPError as e:
-            print(f"{e}\n\twaiting 60s")
-            time.sleep(120)
+            print(f"{e}\n\twaiting 120s")
+            time.sleep(1)
             return self.data.retrieve(file_path, query, params=params, data_type_class=data_type_class)
 
 
@@ -138,7 +147,7 @@ class FantasyNBAAnalyser:
 
     def get_league_ranking(self):
 
-        standing = self._query.retrieve(self._query.query.get_league_standings, data_type_class=models.Standings, forceUpdate=True)
+        standing = self._query.retrieve(self._query.query.get_league_standings, data_type_class=models.Standings, soft_force=True)
 
         data = []
         for team in standing.teams:
