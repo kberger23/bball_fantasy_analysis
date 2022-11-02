@@ -1,3 +1,4 @@
+import datetime as dt
 import os.path
 from pathlib import Path
 import json
@@ -70,8 +71,6 @@ class Query:
         if params is not None:
             for key, arg in params.items():
                 file_path += f"-{key}-{arg}"
-
-        import datetime as dt
 
         _absolute_file_path = self.data.data_dir/f"{file_path}.json"
 
@@ -153,7 +152,7 @@ class FantasyNBAAnalyser:
         for team in standing.teams:
             t = team["team"]
             team_instance = self.get_team_by_name(t.name.decode("utf-8"))
-            weekly = team_instance.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            weekly = team_instance.get_weekly_points(from_week=self.start_week, to_week=self.current_week if self.current_week_done else self.current_week - 1)
             data.append([t.team_standings.playoff_seed, team_instance.name, t.team_standings.outcome_totals.wins,
                          t.team_standings.outcome_totals.losses, t.team_standings.outcome_totals.percentage,
                          t.team_standings.points_for, np.std(weekly),
@@ -165,6 +164,17 @@ class FantasyNBAAnalyser:
     @property
     def current_week(self):
         return self._query.retrieve(self._query.query.get_league_metadata, data_type_class=models.League).current_week
+
+    @property
+    def current_week_done(self):
+        weeks = self._query.retrieve(self._query.query.get_game_weeks_by_game_id, params={"game_id": str(self.GAME_ID)})
+        for week in weeks:
+            if week["game_week"].week == self.current_week:
+                if dt.datetime.now().date() > dt.datetime.strptime(str(week["game_week"].end), '%Y-%m-%d').date():
+                    return True
+                else:
+                    return False
+        raise KeyError("Current week was not found. This should not have happened.")
 
     @property
     def start_week(self):
@@ -179,18 +189,29 @@ class FantasyNBAAnalyser:
         sum = 0
         n = 0
         for team in self.teams:
-            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week if self.current_week_done else self.current_week - 1)
             sum += np.sum(pts)
             n += len(pts)
-        return sum/n
+
+        if n == 0:
+            return 0
+        else:
+            return sum/n
 
     def get_wins_against_mean(self):
 
         for team in self.teams:
-            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week if self.current_week_done else self.current_week - 1)
             pts > self.mean_points
 
     def get_matchup_week(self, week):
 
-        print(self._query.retrieve(self._query.query.get_league_matchups_by_week, params={"chosen_week" : week}))
-        pass
+        matchups = self._query.retrieve(self._query.query.get_league_matchups_by_week, params={"chosen_week": week})
+
+        data = []
+        for matchup in matchups:
+            m = matchup["matchup"]
+            data.append([m.teams[0]["team"].name.decode("utf-8"), m.teams[0]["team"].team_points.total, m.teams[0]["team"].team_projected_points.total,
+                         m.teams[1]["team"].name.decode("utf-8"), m.teams[1]["team"].team_points.total, m.teams[1]["team"].team_projected_points.total])
+
+        return pd.DataFrame(data, columns=['Team 1', "Points", "Proj", 'Team 2', "Points", "Proj"])

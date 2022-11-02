@@ -29,6 +29,11 @@ df_styled = df.style.hide_index().applymap(color_survived, subset=['Rank']).appl
 st.write(df_styled.to_html(), unsafe_allow_html=True)
 st.write(f"#### Number points for the average week are {league.mean_points:.02f}")
 
-print(league.get_matchup_week(league.current_week))
+st.write(f"# Matchup for the current week {league.current_week}")
+matchups = league.get_matchup_week(league.current_week)
+matchups_styled = matchups.style.hide_index().format(formatter={'Points': "{:.1f}", 'Proj': "{:.1f}"})
+st.write(matchups_styled.to_html(), unsafe_allow_html=True)
+
+league.teams[1].get_optimal_roster_for_week(league.current_week)
 
 print(f"Done application in {(datetime.now() - start).total_seconds()}s")
