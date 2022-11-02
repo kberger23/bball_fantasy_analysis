@@ -17,8 +17,8 @@ from yfpy import models
 from .team import Team
 
 import logging
-logging.getLogger("yfpy.query").setLevel(level=logging.DEBUG)
-logging.getLogger("yfpy.data").setLevel(level=logging.DEBUG)
+logging.getLogger("yfpy.query").setLevel(level=logging.INFO)
+logging.getLogger("yfpy.data").setLevel(level=logging.INFO)
 
 class Query:
 
@@ -36,7 +36,6 @@ class Query:
         self.game_code = game_code
         self.league_id = league_id
         self.game_id = game_id
-
 
         self.query = YahooFantasySportsQuery(
             self.auth_dir,
@@ -63,14 +62,14 @@ class Query:
     def app_consumer_secret(self):
         return self.app_auth_file["consumer_secret"]
 
-    def retrieve(self, query: Callable, params: Union[Dict[str, str], None] = None, data_type_class: Type[YahooFantasyObject]=None):
+    def retrieve(self, query: Callable, params: Union[Dict[str, str], None] = None, data_type_class: Type[YahooFantasyObject]=None, forceUpdate=False):
 
         file_path = f"{self.league_id}-{self.game_id}-{self.game_code}-{query.__name__}"
         if params is not None:
             for key, arg in params.items():
                 file_path += f"-{key}-{arg}"
 
-        if (self.data.data_dir/f"{file_path}.json").is_file() and not self.force_update:
+        if (self.data.data_dir/f"{file_path}.json").is_file() and not self.force_update and not forceUpdate:
             self.data.dev_offline = True
             self.data.save_data = False
         else:
@@ -87,19 +86,24 @@ class Query:
 
 class FantasyNBAAnalyser:
 
-    SEASON = 2023
     GAME_CODE = "nba"
-    GAME_ID = 410 # 418
-    GAME_KEY = "410" # "418"
-    LEAGUE_ID = "170305" #"55686"
+    if 0: # 2022
+        SEASON = 2022
+        GAME_ID = 410 # 418
+        GAME_KEY = "410" # "418"
+        LEAGUE_ID = "170305" #"55686"
+    else:
+        SEASON = 2023
+        GAME_ID = 418
+        GAME_KEY = "418"
+        LEAGUE_ID = "55686"
 
     LEAGUE_PLAYER_LIMIT = 101
 
-    def __init__(self):
+    def __init__(self, current_week = None):
 
         #Instantiate query object automatically saving files
         self._query = Query(game_code=self.GAME_CODE, league_id=self.LEAGUE_ID, game_id=self.GAME_ID)
-
         self._teams = None
 
     @property
@@ -134,7 +138,7 @@ class FantasyNBAAnalyser:
 
     def get_league_ranking(self):
 
-        standing = self._query.retrieve(self._query.query.get_league_standings, data_type_class=models.Standings)
+        standing = self._query.retrieve(self._query.query.get_league_standings, data_type_class=models.Standings, forceUpdate=True)
 
         data = []
         for team in standing.teams:
@@ -176,3 +180,8 @@ class FantasyNBAAnalyser:
         for team in self.teams:
             pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
             pts > self.mean_points
+
+    def get_matchup_week(self, week):
+
+        print(self._query.retrieve(self._query.query.get_league_matchups_by_week, params={"chosen_week" : week}))
+        pass
