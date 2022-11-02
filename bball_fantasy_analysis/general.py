@@ -140,9 +140,14 @@ class FantasyNBAAnalyser:
         for team in standing.teams:
             t = team["team"]
             team_instance = self.get_team_by_name(t.name.decode("utf-8"))
-            data.append([t.team_standings.playoff_seed, team_instance.name, t.team_standings.outcome_totals.wins, t.team_standings.outcome_totals.losses, t.team_standings.outcome_totals.percentage, t.team_standings.points_for, np.std(team_instance.get_weekly_points(from_week=self.start_week, to_week=self.current_week)), t.team_standings.points_against, t.team_standings.rank <= 4])
+            weekly = team_instance.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            data.append([t.team_standings.playoff_seed, team_instance.name, t.team_standings.outcome_totals.wins,
+                         t.team_standings.outcome_totals.losses, t.team_standings.outcome_totals.percentage,
+                         t.team_standings.points_for, np.std(weekly),
+                         t.team_standings.points_against, t.team_standings.rank <= 4,
+                         (weekly > self.mean_points).sum()])
 
-        return pd.DataFrame(data, columns=['Rank', 'Team', 'W', 'L', 'Ratio', 'Points +', 'Standard dev', 'Points -', 'PlayOffs']).sort_values(by=['Rank'], ascending=True)
+        return pd.DataFrame(data, columns=['Rank', 'Team', 'W', 'L', 'Ratio', 'Points +', 'Standard dev', 'Points -', 'PlayOffs', 'Wins against the mean']).sort_values(by=['Rank'], ascending=True)
 
     @property
     def current_week(self):
@@ -155,3 +160,19 @@ class FantasyNBAAnalyser:
     @property
     def end_week(self):
         return self._query.retrieve(self._query.query.get_league_metadata, data_type_class=models.League).end_week
+
+    @property
+    def mean_points(self):
+        sum = 0
+        n = 0
+        for team in self.teams:
+            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            sum += np.sum(pts)
+            n += len(pts)
+        return sum/n
+
+    def get_wins_against_mean(self):
+
+        for team in self.teams:
+            pts = team.get_weekly_points(from_week=self.start_week, to_week=self.current_week)
+            pts > self.mean_points
