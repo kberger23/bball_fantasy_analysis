@@ -65,6 +65,15 @@ class Query:
     def app_consumer_secret(self):
         return self.app_auth_file["consumer_secret"]
 
+    @property
+    def current_week_end_data(self):
+        weeks = self.retrieve(self.query.get_game_weeks_by_game_id, params={"game_id": str(self.game_id)})
+        for week in weeks:
+            if week["game_week"].week == self._current_week:
+                return dt.datetime.strptime(str(week["game_week"].end), '%Y-%m-%d').date()
+
+        raise KeyError("Current week was not found. This should not have happened.")
+
     def retrieve(self, query: Callable, params: Union[Dict[str, str], None] = None, data_type_class: Type[YahooFantasyObject]=None, soft_force=False):
 
         file_path = f"{self.league_id}-{self.game_id}-{self.game_code}-{query.__name__}"
@@ -75,9 +84,9 @@ class Query:
         _absolute_file_path = self.data.data_dir/f"{file_path}.json"
 
         current_week = params is not None and "chosen_week" in list(params.keys()) and params["chosen_week"] == self._current_week
-        file_exist_but_created_today = _absolute_file_path.is_file() and dt.datetime.fromtimestamp(os.path.getctime(_absolute_file_path)).date() == dt.datetime.now().date()
+        file_exist_but_created_today_or_after_end_date = _absolute_file_path.is_file() and (dt.datetime.fromtimestamp(os.path.getctime(_absolute_file_path)).date() == dt.datetime.now().date() or dt.datetime.fromtimestamp(os.path.getctime(_absolute_file_path)).date() > self.current_week_end_data)
 
-        if _absolute_file_path.is_file() and not self.force_update and (file_exist_but_created_today or (not soft_force and not current_week)):
+        if _absolute_file_path.is_file() and not self.force_update and (file_exist_but_created_today_or_after_end_date or (not soft_force and not current_week)):
             self.data.dev_offline = True
             self.data.save_data = False
         else:
@@ -166,15 +175,20 @@ class FantasyNBAAnalyser:
         return self._query.retrieve(self._query.query.get_league_metadata, data_type_class=models.League).current_week
 
     @property
-    def current_week_done(self):
+    def current_week_end_data(self):
         weeks = self._query.retrieve(self._query.query.get_game_weeks_by_game_id, params={"game_id": str(self.GAME_ID)})
         for week in weeks:
             if week["game_week"].week == self.current_week:
-                if dt.datetime.now().date() > dt.datetime.strptime(str(week["game_week"].end), '%Y-%m-%d').date():
-                    return True
-                else:
-                    return False
+                return dt.datetime.strptime(str(week["game_week"].end), '%Y-%m-%d').date()
+
         raise KeyError("Current week was not found. This should not have happened.")
+
+    @property
+    def current_week_done(self):
+        if dt.datetime.now().date() > self.current_week_end_data:
+            return True
+        else:
+            return False
 
     @property
     def start_week(self):

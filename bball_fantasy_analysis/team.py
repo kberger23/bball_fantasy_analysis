@@ -13,13 +13,13 @@ class Positions:
     POWER_FORWARD = "PF"
     SMALL_FORWARD = "SF"
 
-class Player:
+class WeeklyTeamPlayer:
 
-    def __init__(self, query, player: dict):
+    def __init__(self, query, player: dict, week):
 
         self._query = query
         self._player = player["player"]
-        print(self._player)
+        self._week = week
 
     @property
     def name(self):
@@ -30,27 +30,37 @@ class Player:
         return self._player.player_id
 
     @property
+    def key(self):
+        return self._player.player_key
+
+    @property
     def plays(self):
         if self._player.selected_position.position not in [Positions.INJURED, Positions.BENCH]:
             return False
         else:
             return True
 
+    @property
+    def weekly_stats(self):
+        stats = self._query.retrieve(self._query.query.get_player_stats_by_week, {"player_key": self.key, "chosen_week": self._week}, data_type_class=models.Player)
+        print(stats)
+        return stats.player_points.total
 
-class Roster:
+
+class WeeklyRoster:
 
     def __init__(self, query, roster, week):
 
         self._query = query
         self.week = week
         self._roster = roster
-        self._players = []
+        self.players = []
 
         for player in self._roster.players:
-            self._players.append(Player(query, player))
+            self.players.append(WeeklyTeamPlayer(query, player, week))
 
-        for player in self._players:
-            print(player.plays)
+        for player in self.players:
+            print(player.name, player.weekly_stats)
 
 
 class Team:
@@ -70,12 +80,18 @@ class Team:
         points = np.zeros_like(weeks)
         for ii, weekCtr in enumerate(weeks):
             query = self._query.retrieve(self._query.query.get_team_stats_by_week, {"team_id": self.id, "chosen_week": weekCtr})
-            points[ii](query["team_points"].total)
+            points[ii] = query["team_points"].total
 
         return points
 
-    def get_optimal_roster_for_week(self, week):
+    def get_roster_for_week(self, week):
         if f"{week}" not in list(self._rosters.keys()):
 
             roster = self._query.retrieve(self._query.query.get_team_roster_by_week, {"team_id": self.id, "chosen_week": week}, data_type_class=models.Roster)
-            self._rosters[f"{week}"] = Roster(self._query, roster, week=week)
+            self._rosters[f"{week}"] = WeeklyRoster(self._query, roster, week=week)
+
+        return self._rosters[f"{week}"]
+
+    def get_optimal_roster_for_week(self, week):
+
+        pass
