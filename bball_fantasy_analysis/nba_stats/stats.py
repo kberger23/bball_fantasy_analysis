@@ -47,7 +47,9 @@ class Team:
             current_date = from_date_dt + timedelta(n)
             matchups = self._league_info.get_matchups_for_day(current_date)
 
+            print(current_date)
             for matchup in matchups:
+                print(matchup["HOME"]["TEAM_ABBREVIATION"], matchup["AWAY"]["TEAM_ABBREVIATION"])
                 if self.id in [matchup["HOME"]["TEAM_ID"], matchup["AWAY"]["TEAM_ID"]]:
                     games += 1
 
@@ -73,8 +75,9 @@ class GeneralInfo:
         matchups = []
         for i in range(len(matchups_list) // 2):
             matchup = {}
-            matchup["HOME"] = self.list_to_dict(matchups_list[i], headers)
-            matchup["AWAY"] = self.list_to_dict(matchups_list[i + 1], headers)
+            ii = i * 2
+            matchup["HOME"] = self.list_to_dict(matchups_list[ii], headers)
+            matchup["AWAY"] = self.list_to_dict(matchups_list[ii + 1], headers)
             matchups.append(matchup)
 
         return matchups

@@ -2,6 +2,7 @@ import numpy as np
 from functools import lru_cache
 
 from yfpy import models
+from .nba_stats import stats
 
 class Positions:
 
@@ -15,10 +16,12 @@ class Positions:
 
 class WeeklyTeamPlayer:
 
-    def __init__(self, query, player: dict, week):
+    def __init__(self, query, nba_stats:stats.Team, player: dict, week):
 
         self._query = query
+        self._nba_stats = nba_stats
         self._player = player["player"]
+
         self._week = week
 
     @property
@@ -41,23 +44,30 @@ class WeeklyTeamPlayer:
             return True
 
     @property
+    def team(self):
+        return self._player.editorial_team_abbr
+
+    @property
     def weekly_stats(self):
         stats = self._query.retrieve(self._query.query.get_player_stats_by_week, {"player_key": self.key, "chosen_week": self._week}, data_type_class=models.Player)
-        print(stats)
         return stats.player_points.total
 
+    @property
+    def games_per_week(self):
+        return self._nba_stats.team(self.team).get_number_of_games(from_date="2022-11-01", to_date="2022-11-04")
 
 class WeeklyRoster:
 
-    def __init__(self, query, roster, week):
+    def __init__(self, query, nba_stats, roster, week):
 
         self._query = query
+        self._nba_stats = nba_stats
         self.week = week
         self._roster = roster
         self.players = []
 
         for player in self._roster.players:
-            self.players.append(WeeklyTeamPlayer(query, player, week))
+            self.players.append(WeeklyTeamPlayer(query, self._nba_stats, player, week))
 
         for player in self.players:
             print(player.name, player.weekly_stats)
@@ -65,9 +75,10 @@ class WeeklyRoster:
 
 class Team:
 
-    def __init__(self, query, name, id):
+    def __init__(self, query, nba_stats, name, id):
 
         self._query = query
+        self._nba_stats = nba_stats
 
         self.name = name
         self.id = id
@@ -88,7 +99,7 @@ class Team:
         if f"{week}" not in list(self._rosters.keys()):
 
             roster = self._query.retrieve(self._query.query.get_team_roster_by_week, {"team_id": self.id, "chosen_week": week}, data_type_class=models.Roster)
-            self._rosters[f"{week}"] = WeeklyRoster(self._query, roster, week=week)
+            self._rosters[f"{week}"] = WeeklyRoster(self._query, self._nba_stats, roster, week=week)
 
         return self._rosters[f"{week}"]
 

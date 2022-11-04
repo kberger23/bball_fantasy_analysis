@@ -16,6 +16,8 @@ from yfpy.query import YahooFantasySportsQuery, YahooFantasyObject
 from yfpy import models
 
 from .team import Team
+from .nba_stats.stats import NBAstats
+
 
 import logging
 logging.getLogger("yfpy.query").setLevel(level=logging.INFO)
@@ -67,7 +69,7 @@ class Query:
 
     @property
     def current_week_end_data(self):
-        weeks = self.retrieve(self.query.get_game_weeks_by_game_id, params={"game_id": str(self.game_id)})
+        weeks = self.query.get_game_weeks_by_game_id(game_id=self.game_id)
         for week in weeks:
             if week["game_week"].week == self._current_week:
                 return dt.datetime.strptime(str(week["game_week"].end), '%Y-%m-%d').date()
@@ -123,6 +125,8 @@ class FantasyNBAAnalyser:
         self._query = Query(game_code=self.GAME_CODE, league_id=self.LEAGUE_ID, game_id=self.GAME_ID)
         self._teams = None
 
+        self._nba_stats = NBAstats()
+
     @property
     def app_auth_file(self):
         with open("private.json", "r") as f:
@@ -144,7 +148,7 @@ class FantasyNBAAnalyser:
             teams = self._query.retrieve(self._query.query.get_league_teams)
             for team in teams:
                 t = team["team"]
-                self._teams.append(Team(self._query, t.name.decode("utf-8"), t.team_id))
+                self._teams.append(Team(self._query, self._nba_stats, t.name.decode("utf-8"), t.team_id))
         return self._teams
 
     def get_team_by_name(self, name):
